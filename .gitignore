@@ -3,3 +3,7 @@ node_modules/
 out/
 *.vsix
 docs/
+
+# disallow docs directories anywhere in the repo
+/docs/
+**/docs/
