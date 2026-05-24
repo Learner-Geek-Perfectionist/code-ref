@@ -1,9 +1,13 @@
 {
-  "name": "claude-code-ref",
-  "displayName": "Claude Code Reference",
-  "description": "Send absolute-path code reference to Kitty terminal for Claude Code CLI",
+  "name": "code-ref",
+  "displayName": "Code Ref",
+  "description": "Copy absolute-path code references to clipboard, with macOS Kitty handoff for AI CLI tools",
   "publisher": "Xin",
   "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Learner-Geek-Perfectionist/code-ref.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -18,13 +22,13 @@
   "contributes": {
     "commands": [
       {
-        "command": "claude-code-ref.sendReference",
-        "title": "Send Code Reference to Kitty"
+        "command": "code-ref.sendReference",
+        "title": "Copy Code Reference"
       }
     ],
     "keybindings": [
       {
-        "command": "claude-code-ref.sendReference",
+        "command": "code-ref.sendReference",
         "key": "alt+k",
         "when": "editorTextFocus"
       }
@@ -32,6 +36,7 @@
   },
   "scripts": {
     "compile": "tsc -p ./",
+    "test": "npm run compile && node --test out/**/*.test.js",
     "package": "vsce package"
   },
   "devDependencies": {

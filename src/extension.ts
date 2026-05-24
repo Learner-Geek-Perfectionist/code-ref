@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 import { readdir } from 'fs/promises';
 import { execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
+import {
+  createReferenceSender,
+  type ReferenceEditor,
+  type SendResult,
+} from './reference';
 
 const execFileAsync = promisify(execFileCb);
 
@@ -53,13 +58,6 @@ async function getActiveTabInfo(socketPath: string): Promise<TabInfo | undefined
 
 // ── Send text to Kitty ──────────────────────────────────────
 
-interface SendResult {
-  success: boolean;
-  tabPosition?: number;
-  tabTitle?: string;
-  error?: string;
-}
-
 async function sendToKitty(text: string): Promise<SendResult> {
   const socketPath = await findKittySocket();
   if (!socketPath) {
@@ -89,81 +87,80 @@ async function sendToKitty(text: string): Promise<SendResult> {
   };
 }
 
-// ── Build reference string ──────────────────────────────────
+// ── VS Code editor adapter ─────────────────────────────────
 
-function buildReference(editor: vscode.TextEditor): string {
-  const absPath = editor.document.uri.fsPath;
-  const refs: string[] = [];
-
-  for (const sel of editor.selections) {
-    if (sel.isEmpty) {
-      const line = sel.active.line + 1;
-      refs.push(`@${absPath}#${line}`);
-    } else {
-      const startLine = sel.start.line + 1;
-      let endLine = sel.end.line + 1;
-      // If selection ends at column 0 of a line, don't include that line
-      if (sel.end.character === 0 && sel.end.line > sel.start.line) {
-        endLine = sel.end.line;
-      }
-      refs.push(`@${absPath}#${startLine}-${endLine}`);
-    }
-  }
-
-  return refs.join(' ') + ' ';
+function toReferenceEditor(editor: vscode.TextEditor): ReferenceEditor {
+  return {
+    documentPath: editor.document.uri.fsPath,
+    selections: editor.selections.map(sel => ({
+      isEmpty: sel.isEmpty,
+      activeLine: sel.active.line,
+      startLine: sel.start.line,
+      endLine: sel.end.line,
+      endCharacter: sel.end.character,
+    })),
+  };
 }
 
 // ── Command handler ─────────────────────────────────────────
 
-async function sendReference(): Promise<void> {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    vscode.window.showErrorMessage('No active editor. Open a file first.');
-    return;
-  }
-
-  const refText = buildReference(editor);
-  const result = await sendToKitty(refText);
-
-  if (result.success) {
-    // Copy to clipboard (best-effort)
-    try {
-      await vscode.env.clipboard.writeText(refText.trimEnd());
-    } catch {
-      vscode.window.setStatusBarMessage('⚠ Sent to Kitty but clipboard copy failed', 3000);
-      return;
-    }
-
-    const msg = result.tabPosition && result.tabTitle
-      ? `✅ #${result.tabPosition}:${result.tabTitle}`
-      : '✅ Sent';
-    vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: msg },
-      () => new Promise(resolve => setTimeout(resolve, 3000)),
-    );
-
-    // Focus Kitty
-    execFileAsync('open', ['-a', 'kitty']).catch(() => {});
-  } else {
-    // Failure feedback with diagnostic
-    const actions = result.error?.includes('socket')
+const sendReference = createReferenceSender({
+  getEditor: () => {
+    const editor = vscode.window.activeTextEditor;
+    return editor ? toReferenceEditor(editor) : undefined;
+  },
+  writeClipboard: text => vscode.env.clipboard.writeText(text),
+  shouldSendToKitty: () => process.platform === 'darwin',
+  sendToKitty,
+  onNoEditor: () => {
+    void vscode.window.showErrorMessage('No active editor. Open a file first.');
+  },
+  onClipboardFailure: () => {
+    void vscode.window.showErrorMessage('Failed to copy code reference to clipboard.');
+  },
+  onKittyFailure: async error => {
+    const actions = error.includes('socket')
       ? ['Open Setup Guide']
       : [];
-    const choice = await vscode.window.showErrorMessage(
-      `❌ ${result.error ?? 'Unknown error sending to Kitty'}`,
+    const choice = await vscode.window.showWarningMessage(
+      `Copied to clipboard, but ${error}`,
       ...actions,
     );
     if (choice === 'Open Setup Guide') {
-      vscode.env.openExternal(vscode.Uri.parse(
+      await vscode.env.openExternal(vscode.Uri.parse(
         'https://sw.kovidgoyal.net/kitty/remote-control/'
       ));
     }
-  }
-}
+  },
+  onSuccess: async result => {
+    const msg = result.tabPosition && result.tabTitle
+      ? `✅ Copied + #${result.tabPosition}:${result.tabTitle}`
+      : '✅ Copied + Sent';
+    await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: msg },
+      () => new Promise(resolve => setTimeout(resolve, 3000)),
+    );
+  },
+  onClipboardOnlySuccess: async () => {
+    await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: '✅ Copied' },
+      () => new Promise(resolve => setTimeout(resolve, 1500)),
+    );
+  },
+  focusKitty: () => {
+    execFileAsync('open', ['-a', 'kitty']).catch(() => {});
+  },
+});
 
 // ── Status bar: Kitty connection indicator ──────────────────
 
 async function updateKittyStatus(): Promise<void> {
+  if (process.platform !== 'darwin') {
+    statusBarItem.text = '$(clippy) Code Ref';
+    statusBarItem.tooltip = 'Code references copy to clipboard on this platform.';
+    return;
+  }
+
   const socket = await findKittySocket();
   if (socket) {
     statusBarItem.text = '$(terminal) Kitty ✓';
@@ -189,7 +186,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Register command
   const cmd = vscode.commands.registerCommand(
-    'claude-code-ref.sendReference',
+    'code-ref.sendReference',
     sendReference,
   );
 
