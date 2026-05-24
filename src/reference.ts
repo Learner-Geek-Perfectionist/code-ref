@@ -81,7 +81,7 @@ export function createReferenceSender(
       return;
     }
 
-    await deps.onSuccess(result);
     await deps.focusKitty();
+    await deps.onSuccess(result);
   };
 }

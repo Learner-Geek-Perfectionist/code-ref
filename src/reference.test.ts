@@ -125,3 +125,60 @@ test('sendReference only copies to clipboard when Kitty sending is disabled', as
     'clipboard-only-success',
   ]);
 });
+
+test('sendReference focuses Kitty before waiting for success notification to finish', async () => {
+  const events: string[] = [];
+  let finishNotification: () => void = () => {
+    throw new Error('notification did not start');
+  };
+  const sendReference = createReferenceSender({
+    getEditor: () => editor('/tmp/project/src/app.ts', [
+      {
+        isEmpty: true,
+        activeLine: 4,
+        startLine: 4,
+        endLine: 4,
+        endCharacter: 9,
+      },
+    ]),
+    writeClipboard: async (text: string) => {
+      events.push(`clipboard:${text}`);
+    },
+    sendToKitty: async (text: string) => {
+      events.push(`kitty:${text}`);
+      return { success: true };
+    },
+    onNoEditor: () => {
+      events.push('no-editor');
+    },
+    onClipboardFailure: () => {
+      events.push('clipboard-failed');
+    },
+    onKittyFailure: (error: string) => {
+      events.push(`kitty-failed:${error}`);
+    },
+    onSuccess: () => new Promise<void>(resolve => {
+      events.push('notification-start');
+      finishNotification = () => {
+        events.push('notification-finish');
+        resolve();
+      };
+    }),
+    focusKitty: () => {
+      events.push('focus-kitty');
+    },
+  });
+
+  const pending = sendReference();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(events, [
+    'clipboard:@/tmp/project/src/app.ts#5',
+    'kitty:@/tmp/project/src/app.ts#5 ',
+    'focus-kitty',
+    'notification-start',
+  ]);
+
+  finishNotification();
+  await pending;
+});
