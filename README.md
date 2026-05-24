@@ -43,7 +43,7 @@ npm run compile
 npm run package
 
 # 安装 .vsix 文件
-code --install-extension code-ref-1.0.0.vsix
+code --install-extension code-ref-1.0.1.vsix
 ```
 
 ## 使用

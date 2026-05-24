@@ -7,6 +7,7 @@ import {
   type ReferenceEditor,
   type SendResult,
 } from './reference';
+import { getNotificationTitle } from './notifications';
 
 const execFileAsync = promisify(execFileCb);
 
@@ -123,7 +124,7 @@ const sendReference = createReferenceSender({
       ? ['Open Setup Guide']
       : [];
     const choice = await vscode.window.showWarningMessage(
-      `Copied to clipboard, but ${error}`,
+      getNotificationTitle('kittyUnavailable'),
       ...actions,
     );
     if (choice === 'Open Setup Guide') {
@@ -133,17 +134,14 @@ const sendReference = createReferenceSender({
     }
   },
   onSuccess: async result => {
-    const msg = result.tabPosition && result.tabTitle
-      ? `✅ Copied + #${result.tabPosition}:${result.tabTitle}`
-      : '✅ Copied + Sent';
     await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: msg },
+      { location: vscode.ProgressLocation.Notification, title: getNotificationTitle('kittySuccess') },
       () => new Promise(resolve => setTimeout(resolve, 3000)),
     );
   },
   onClipboardOnlySuccess: async () => {
     await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: '✅ Copied' },
+      { location: vscode.ProgressLocation.Notification, title: getNotificationTitle('clipboardOnly') },
       () => new Promise(resolve => setTimeout(resolve, 1500)),
     );
   },
