@@ -1,9 +1,9 @@
 {
   "name": "code-ref",
   "displayName": "Code Ref",
-  "description": "Copy absolute-path code references to clipboard, with macOS Kitty handoff for AI CLI tools",
+  "description": "Copy selected VS Code text as absolute-path code references with an opt-in smart copy shortcut",
   "publisher": "Xin",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,26 +18,45 @@
   "extensionKind": [
     "ui"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "code-ref.sendReference",
+        "command": "code-ref.copyReference",
         "title": "Copy Code Reference"
+      },
+      {
+        "command": "code-ref.toggleSmartCopy",
+        "title": "Toggle Code Ref Smart Copy"
       }
     ],
     "keybindings": [
       {
-        "command": "code-ref.sendReference",
-        "key": "alt+k",
-        "when": "editorTextFocus"
+        "command": "code-ref.copyReference",
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "when": "code-ref.smartCopyEnabled && editorTextFocus && editorHasSelection"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Code Ref",
+      "properties": {
+        "code-ref.smartCopy.enabled": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "Enable Smart Copy globally. When enabled, the platform copy shortcut copies selected editor text as an absolute-path code reference."
+        }
+      }
+    }
   },
   "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('out', { recursive: true, force: true })\"",
     "compile": "tsc -p ./",
-    "test": "npm run compile && node --test out/**/*.test.js",
+    "test": "npm run clean && npm run compile && node --test out/**/*.test.js",
     "package": "vsce package"
   },
   "devDependencies": {

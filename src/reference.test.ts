@@ -3,9 +3,8 @@ import { test } from 'node:test';
 
 import {
   buildReference,
-  createReferenceSender,
+  createClipboardReferenceCopier,
   type ReferenceEditor,
-  type SendResult,
 } from './reference';
 
 function editor(documentPath: string, selections: ReferenceEditor['selections']): ReferenceEditor {
@@ -33,24 +32,20 @@ test('buildReference creates absolute file references for cursors and ranges', (
   assert.equal(ref, '@/tmp/project/src/app.ts#5 @/tmp/project/src/app.ts#10-13 ');
 });
 
-test('sendReference copies to clipboard before sending to Kitty when Kitty fails', async () => {
+test('copyReference copies the built reference to clipboard only', async () => {
   const events: string[] = [];
-  const sendReference = createReferenceSender({
+  const copyReference = createClipboardReferenceCopier({
     getEditor: () => editor('/tmp/project/src/app.ts', [
       {
-        isEmpty: true,
-        activeLine: 4,
-        startLine: 4,
-        endLine: 4,
-        endCharacter: 9,
+        isEmpty: false,
+        activeLine: 9,
+        startLine: 9,
+        endLine: 12,
+        endCharacter: 0,
       },
     ]),
     writeClipboard: async (text: string) => {
       events.push(`clipboard:${text}`);
-    },
-    sendToKitty: async (text: string) => {
-      events.push(`kitty:${text}`);
-      return { success: false, error: 'Kitty socket not found' };
     },
     onNoEditor: () => {
       events.push('no-editor');
@@ -58,127 +53,15 @@ test('sendReference copies to clipboard before sending to Kitty when Kitty fails
     onClipboardFailure: () => {
       events.push('clipboard-failed');
     },
-    onKittyFailure: (error: string) => {
-      events.push(`kitty-failed:${error}`);
-    },
-    onSuccess: (_result: SendResult) => {
+    onSuccess: () => {
       events.push('success');
     },
-    focusKitty: () => {
-      events.push('focus-kitty');
-    },
   });
 
-  await sendReference();
+  await copyReference();
 
   assert.deepEqual(events, [
-    'clipboard:@/tmp/project/src/app.ts#5',
-    'kitty:@/tmp/project/src/app.ts#5 ',
-    'kitty-failed:Kitty socket not found',
+    'clipboard:@/tmp/project/src/app.ts#10-12',
+    'success',
   ]);
-});
-
-test('sendReference only copies to clipboard when Kitty sending is disabled', async () => {
-  const events: string[] = [];
-  const sendReference = createReferenceSender({
-    getEditor: () => editor('/tmp/project/src/app.ts', [
-      {
-        isEmpty: true,
-        activeLine: 4,
-        startLine: 4,
-        endLine: 4,
-        endCharacter: 9,
-      },
-    ]),
-    writeClipboard: async (text: string) => {
-      events.push(`clipboard:${text}`);
-    },
-    shouldSendToKitty: () => false,
-    sendToKitty: async (text: string) => {
-      events.push(`kitty:${text}`);
-      return { success: false, error: 'Kitty should not be called' };
-    },
-    onNoEditor: () => {
-      events.push('no-editor');
-    },
-    onClipboardFailure: () => {
-      events.push('clipboard-failed');
-    },
-    onKittyFailure: (error: string) => {
-      events.push(`kitty-failed:${error}`);
-    },
-    onSuccess: (_result: SendResult) => {
-      events.push('success');
-    },
-    onClipboardOnlySuccess: () => {
-      events.push('clipboard-only-success');
-    },
-    focusKitty: () => {
-      events.push('focus-kitty');
-    },
-  });
-
-  await sendReference();
-
-  assert.deepEqual(events, [
-    'clipboard:@/tmp/project/src/app.ts#5',
-    'clipboard-only-success',
-  ]);
-});
-
-test('sendReference focuses Kitty before waiting for success notification to finish', async () => {
-  const events: string[] = [];
-  let finishNotification: () => void = () => {
-    throw new Error('notification did not start');
-  };
-  const sendReference = createReferenceSender({
-    getEditor: () => editor('/tmp/project/src/app.ts', [
-      {
-        isEmpty: true,
-        activeLine: 4,
-        startLine: 4,
-        endLine: 4,
-        endCharacter: 9,
-      },
-    ]),
-    writeClipboard: async (text: string) => {
-      events.push(`clipboard:${text}`);
-    },
-    sendToKitty: async (text: string) => {
-      events.push(`kitty:${text}`);
-      return { success: true };
-    },
-    onNoEditor: () => {
-      events.push('no-editor');
-    },
-    onClipboardFailure: () => {
-      events.push('clipboard-failed');
-    },
-    onKittyFailure: (error: string) => {
-      events.push(`kitty-failed:${error}`);
-    },
-    onSuccess: () => new Promise<void>(resolve => {
-      events.push('notification-start');
-      finishNotification = () => {
-        events.push('notification-finish');
-        resolve();
-      };
-    }),
-    focusKitty: () => {
-      events.push('focus-kitty');
-    },
-  });
-
-  const pending = sendReference();
-  await new Promise(resolve => setImmediate(resolve));
-
-  assert.deepEqual(events, [
-    'clipboard:@/tmp/project/src/app.ts#5',
-    'kitty:@/tmp/project/src/app.ts#5 ',
-    'focus-kitty',
-    'notification-start',
-  ]);
-
-  finishNotification();
-  await pending;
 });

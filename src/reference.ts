@@ -11,26 +11,14 @@ export interface ReferenceEditor {
   selections: ReferenceSelection[];
 }
 
-export interface SendResult {
-  success: boolean;
-  tabPosition?: number;
-  tabTitle?: string;
-  error?: string;
-}
-
 type MaybePromise<T> = T | PromiseLike<T>;
 
-export interface ReferenceSenderDependencies {
+export interface ClipboardReferenceCopierDependencies {
   getEditor: () => ReferenceEditor | undefined;
   writeClipboard: (text: string) => MaybePromise<void>;
-  shouldSendToKitty?: () => boolean;
-  sendToKitty: (text: string) => MaybePromise<SendResult>;
   onNoEditor: () => MaybePromise<void>;
   onClipboardFailure: (error: unknown) => MaybePromise<void>;
-  onKittyFailure: (error: string) => MaybePromise<void>;
-  onSuccess: (result: SendResult) => MaybePromise<void>;
-  onClipboardOnlySuccess?: () => MaybePromise<void>;
-  focusKitty: () => MaybePromise<void>;
+  onSuccess?: () => MaybePromise<void>;
 }
 
 export function buildReference(editor: ReferenceEditor): string {
@@ -51,8 +39,8 @@ export function buildReference(editor: ReferenceEditor): string {
   return refs.join(' ') + ' ';
 }
 
-export function createReferenceSender(
-  deps: ReferenceSenderDependencies,
+export function createClipboardReferenceCopier(
+  deps: ClipboardReferenceCopierDependencies,
 ): () => Promise<void> {
   return async () => {
     const editor = deps.getEditor();
@@ -61,27 +49,15 @@ export function createReferenceSender(
       return;
     }
 
-    const refText = buildReference(editor);
+    const refText = buildReference(editor).trimEnd();
 
     try {
-      await deps.writeClipboard(refText.trimEnd());
+      await deps.writeClipboard(refText);
     } catch (error: unknown) {
       await deps.onClipboardFailure(error);
       return;
     }
 
-    if (deps.shouldSendToKitty?.() === false) {
-      await deps.onClipboardOnlySuccess?.();
-      return;
-    }
-
-    const result = await deps.sendToKitty(refText);
-    if (!result.success) {
-      await deps.onKittyFailure(result.error ?? 'Unknown error sending to Kitty');
-      return;
-    }
-
-    await deps.focusKitty();
-    await deps.onSuccess(result);
+    await deps.onSuccess?.();
   };
 }
