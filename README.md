@@ -2,6 +2,15 @@
 
 一个代码引用复制工具，支持 VS Code 和 Android Studio / JetBrains IDE。开启 Smart Copy 后，可以直接用系统复制快捷键把选中的代码复制为代码引用（绝对路径 + 行号）。macOS 使用 `Cmd+C`，Windows / Linux 使用 `Ctrl+C`。适合配合 Claude Code、Codex CLI 或其他支持文件引用的 AI 编程工具使用。
 
+## 目录结构
+
+```text
+code-ref/
+  vscode/      VS Code 插件工程
+  jetbrains/   Android Studio / JetBrains 插件工程
+  docs/        设计和实现记录
+```
+
 ## 工作原理
 
 1. 点击状态栏的 `Code Ref OFF`，开启 Smart Copy
@@ -34,25 +43,23 @@ VS Code 版的 Smart Copy 开关保存为全局用户设置 `code-ref.smartCopy.
 # 克隆并构建
 git clone <repo-url> code-ref
 cd code-ref
-npm install
-npm run compile
-npm run package
+npm run install:vscode
+npm run package:vscode
 
 # 安装 .vsix 文件
-code --install-extension code-ref-1.1.0.vsix
+code --install-extension vscode/code-ref-1.1.1.vsix
 ```
 
 ## Android Studio 安装
 
 ```bash
-cd jetbrains
-./gradlew buildPlugin
+npm run package:jetbrains
 ```
 
 生成的插件包位于：
 
 ```text
-jetbrains/build/distributions/code-ref-jetbrains-1.1.0.zip
+jetbrains/build/distributions/code-ref-jetbrains-1.1.1.zip
 ```
 
 在 Android Studio 中打开 `Settings | Plugins | Install Plugin from Disk...`，选择这个 `.zip` 文件安装，然后重启 IDE。
@@ -70,8 +77,8 @@ jetbrains/build/distributions/code-ref-jetbrains-1.1.0.zip
 - `Code Ref OFF` — 使用 IDE 默认复制行为
 
 Release 会同时提供：
-- VS Code: `code-ref-<version>.vsix`
-- Android Studio / JetBrains: `code-ref-jetbrains-<version>.zip`
+- VS Code: `vscode/code-ref-<version>.vsix`
+- Android Studio / JetBrains: `jetbrains/build/distributions/code-ref-jetbrains-<version>.zip`
 
 ## 许可证
 
