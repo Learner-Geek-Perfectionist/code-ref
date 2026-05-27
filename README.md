@@ -8,7 +8,6 @@
 code-ref/
   vscode/      VS Code 插件工程
   jetbrains/   Android Studio / JetBrains 插件工程
-  docs/        设计和实现记录
 ```
 
 ## 工作原理
@@ -47,7 +46,7 @@ npm run install:vscode
 npm run package:vscode
 
 # 安装 .vsix 文件
-code --install-extension vscode/code-ref-1.1.1.vsix
+code --install-extension vscode/code-ref-1.1.2.vsix
 ```
 
 ## Android Studio 安装
@@ -59,7 +58,7 @@ npm run package:jetbrains
 生成的插件包位于：
 
 ```text
-jetbrains/build/distributions/code-ref-jetbrains-1.1.1.zip
+jetbrains/build/distributions/code-ref-jetbrains-1.1.2.zip
 ```
 
 在 Android Studio 中打开 `Settings | Plugins | Install Plugin from Disk...`，选择这个 `.zip` 文件安装，然后重启 IDE。
