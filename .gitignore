@@ -2,6 +2,10 @@
 node_modules/
 out/
 *.vsix
+*.zip
+jetbrains/.gradle/
+jetbrains/.intellijPlatform/
+jetbrains/build/
 docs/
 
 # disallow docs directories anywhere in the repo

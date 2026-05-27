@@ -32,7 +32,12 @@ export function buildReference(editor: ReferenceEditor): string {
       if (sel.endCharacter === 0 && sel.endLine > sel.startLine) {
         endLine = sel.endLine;
       }
-      refs.push(`@${editor.documentPath}#${sel.startLine + 1}-${endLine}`);
+      const startLine = sel.startLine + 1;
+      refs.push(
+        startLine === endLine
+          ? `@${editor.documentPath}#${startLine}`
+          : `@${editor.documentPath}#${startLine}-${endLine}`
+      );
     }
   }
 

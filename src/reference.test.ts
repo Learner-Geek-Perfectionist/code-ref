@@ -32,6 +32,20 @@ test('buildReference creates absolute file references for cursors and ranges', (
   assert.equal(ref, '@/tmp/project/src/app.ts#5 @/tmp/project/src/app.ts#10-13 ');
 });
 
+test('buildReference creates line-only references for single-line selections', () => {
+  const ref = buildReference(editor('/tmp/project/src/app.ts', [
+    {
+      isEmpty: false,
+      activeLine: 4,
+      startLine: 4,
+      endLine: 4,
+      endCharacter: 9,
+    },
+  ]));
+
+  assert.equal(ref, '@/tmp/project/src/app.ts#5 ');
+});
+
 test('copyReference copies the built reference to clipboard only', async () => {
   const events: string[] = [];
   const copyReference = createClipboardReferenceCopier({

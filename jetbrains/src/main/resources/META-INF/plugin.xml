@@ -1,0 +1,21 @@
+<idea-plugin>
+    <id>com.github.learnergeekperfectionist.coderef.jetbrains</id>
+    <name>Code Ref</name>
+    <vendor url="https://github.com/Learner-Geek-Perfectionist/code-ref">Learner-Geek-Perfectionist</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="com.github.learnergeekperfectionist.coderef.SmartCopySettings"/>
+        <applicationService serviceImplementation="com.github.learnergeekperfectionist.coderef.CodeRefCopyHandlerInstaller"/>
+        <postStartupActivity implementation="com.github.learnergeekperfectionist.coderef.CodeRefStartupActivity"/>
+        <statusBarWidgetFactory implementation="com.github.learnergeekperfectionist.coderef.CodeRefStatusBarWidgetFactory"/>
+    </extensions>
+
+    <actions>
+        <action id="CodeRef.ToggleSmartCopy"
+                class="com.github.learnergeekperfectionist.coderef.ToggleSmartCopyAction"
+                text="Toggle Code Ref Smart Copy"
+                description="Enable or disable Code Ref Smart Copy"/>
+    </actions>
+</idea-plugin>
